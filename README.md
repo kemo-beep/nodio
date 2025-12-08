@@ -10,7 +10,59 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up transcription service (choose one option):
+
+   **Option A: Local Whisper Server (Recommended - Free & Private)**
+
+   Quick setup:
+
+   ```bash
+   cd server
+   ./setup.sh        # First time setup
+   ./start.sh        # Start the server
+   ```
+
+   Or manually:
+
+   ```bash
+   cd server
+   pip install -r requirements.txt
+   python server.py
+   ```
+
+   The server will start on `http://localhost:8000`
+
+   Create a `.env` file in the project root:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then add to `.env`:
+
+   ```
+   EXPO_PUBLIC_WHISPER_SERVER_URL=http://localhost:8000
+   EXPO_PUBLIC_TRANSCRIPTION_PROVIDER=local
+   ```
+
+   **Note:** For mobile devices, use your computer's local IP instead of `localhost` (e.g., `http://192.168.1.100:8000`)
+
+   See [Server README](./server/README.md) or [Whisper Server Setup Guide](./docs/whisper-server-setup.md) for more details.
+
+   **Option B: OpenAI API (Requires API Key)**
+
+   Create a `.env` file and add:
+
+   ```
+   EXPO_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
+   EXPO_PUBLIC_TRANSCRIPTION_PROVIDER=openai
+   ```
+
+   Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+   **Note:** After adding configuration, restart the Expo development server.
+
+3. Start the app
 
    ```bash
    npx expo start
