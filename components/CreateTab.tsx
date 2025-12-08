@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Theme } from '../constants/Colors';
+import AIService from '../services/AIService';
 
-type CreateOption = 'bullet' | 'mindmap' | 'journal' | 'todo' | 'illustration' | 'video';
+type CreateOption = 'bullet' | 'mindmap' | 'journal' | 'meeting' | 'todo' | 'illustration' | 'video';
 
 interface CreateTabProps {
     transcript: string;
@@ -13,7 +14,9 @@ interface CreateTabProps {
 export const CreateTab: React.FC<CreateTabProps> = ({ transcript, onContentCreated }) => {
     const [selectedOption, setSelectedOption] = useState<CreateOption | null>(null);
     const [content, setContent] = useState('');
+    const [mindMapImageUri, setMindMapImageUri] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const createOptions: { type: CreateOption; label: string; icon: string; description: string }[] = [
         {
@@ -33,6 +36,12 @@ export const CreateTab: React.FC<CreateTabProps> = ({ transcript, onContentCreat
             label: 'Journal Entry',
             icon: 'book',
             description: 'Transform into a journal entry'
+        },
+        {
+            type: 'meeting',
+            label: 'Meeting Notes',
+            icon: 'document-text',
+            description: 'Create structured meeting notes'
         },
         {
             type: 'todo',
@@ -55,53 +64,84 @@ export const CreateTab: React.FC<CreateTabProps> = ({ transcript, onContentCreat
     ];
 
     const handleOptionSelect = async (option: CreateOption) => {
+        if (!transcript || transcript.trim().length === 0) {
+            setError('No transcript available. Please ensure your project has a transcript.');
+            return;
+        }
+
         setSelectedOption(option);
         setIsGenerating(true);
+        setError(null);
+        setContent('');
+        setMindMapImageUri(null);
 
-        // Simulate AI generation (replace with actual AI service call)
-        setTimeout(() => {
+        try {
             let generatedContent = '';
-            
+            let imageUri: string | null = null;
+
             switch (option) {
                 case 'bullet':
-                    generatedContent = transcript
-                        .split('.')
-                        .filter(s => s.trim().length > 0)
-                        .slice(0, 5)
-                        .map(s => `• ${s.trim()}`)
-                        .join('\n');
+                    generatedContent = await AIService.createBulletPoints(transcript);
                     break;
                 case 'mindmap':
-                    generatedContent = `Central Topic: ${transcript.substring(0, 30)}...\n\nMain Branches:\n- Key Point 1\n- Key Point 2\n- Key Point 3`;
+                    // Mind map tries to return an image, but falls back to text if image generation fails
+                    try {
+                        const result = await AIService.createMindMapImage(transcript);
+                        // Check if it's a data URI (image) or URL (image) or text
+                        if (result.startsWith('data:image/') || result.startsWith('http://') || result.startsWith('https://')) {
+                            // It's an image
+                            setMindMapImageUri(result);
+                            generatedContent = 'Mind map image generated successfully.';
+                        } else {
+                            // It's a text-based mind map
+                            generatedContent = result;
+                            setContent(result);
+                        }
+                    } catch (err: any) {
+                        // If image generation fails completely, generate text-based mind map
+                        console.warn('Image generation failed, using text-based mind map:', err.message);
+                        // Try to generate a structured text mind map
+                        try {
+                            generatedContent = await AIService.createBulletPoints(transcript);
+                        } catch {
+                            generatedContent = 'Failed to generate mind map. Please try again.';
+                        }
+                    }
                     break;
                 case 'journal':
-                    generatedContent = `Today's Entry:\n\n${transcript}\n\nReflection: This was an interesting conversation that covered several important topics.`;
+                    generatedContent = await AIService.createJournalEntry(transcript);
+                    break;
+                case 'meeting':
+                    generatedContent = await AIService.createMeetingNotes(transcript);
                     break;
                 case 'todo':
-                    generatedContent = transcript
-                        .split(/[.!?]/)
-                        .filter(s => s.trim().length > 10)
-                        .slice(0, 3)
-                        .map((s, i) => `[ ] ${s.trim()}`)
-                        .join('\n');
+                    generatedContent = await AIService.createTodoList(transcript);
                     break;
                 case 'illustration':
-                    generatedContent = 'Illustration generation in progress...\n\nThis would generate a visual representation based on the transcript.';
+                    // For now, use a placeholder - can be enhanced later
+                    generatedContent = 'Illustration generation feature coming soon.';
                     break;
                 case 'video':
+                    // Video generation uses existing generateScenes method
                     generatedContent = 'Video creation in progress...\n\nThis would create a video with scenes based on the transcript.';
                     break;
             }
 
             setContent(generatedContent);
-            setIsGenerating(false);
             onContentCreated?.(option, generatedContent);
-        }, 1500);
+        } catch (err: any) {
+            console.error('Content generation error:', err);
+            setError(err.message || 'Failed to generate content. Please try again.');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleClear = () => {
         setSelectedOption(null);
         setContent('');
+        setMindMapImageUri(null);
+        setError(null);
     };
 
     return (
@@ -150,9 +190,31 @@ export const CreateTab: React.FC<CreateTabProps> = ({ transcript, onContentCreat
 
                     {isGenerating ? (
                         <View style={styles.generatingContainer}>
-                            <Ionicons name="hourglass-outline" size={32} color={Theme.primary} />
+                            <ActivityIndicator size="large" color={Theme.primary} />
                             <Text style={styles.generatingText}>Generating content...</Text>
+                            {selectedOption === 'mindmap' && (
+                                <Text style={styles.generatingSubtext}>Creating mind map image...</Text>
+                            )}
                         </View>
+                    ) : error ? (
+                        <View style={styles.errorContainer}>
+                            <Ionicons name="alert-circle-outline" size={32} color={Theme.error || '#FF3B30'} />
+                            <Text style={styles.errorText}>{error}</Text>
+                            <TouchableOpacity 
+                                style={styles.retryButton}
+                                onPress={() => selectedOption && handleOptionSelect(selectedOption)}
+                            >
+                                <Text style={styles.retryButtonText}>Retry</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : selectedOption === 'mindmap' && mindMapImageUri && (mindMapImageUri.startsWith('data:image/') || mindMapImageUri.startsWith('http://') || mindMapImageUri.startsWith('https://')) ? (
+                        <ScrollView style={styles.contentScroll} contentContainerStyle={styles.imageContainer}>
+                            <Image 
+                                source={{ uri: mindMapImageUri }} 
+                                style={styles.mindMapImage}
+                                resizeMode="contain"
+                            />
+                        </ScrollView>
                     ) : (
                         <ScrollView style={styles.contentScroll}>
                             <TextInput
@@ -167,12 +229,14 @@ export const CreateTab: React.FC<CreateTabProps> = ({ transcript, onContentCreat
                         </ScrollView>
                     )}
 
-                    {!isGenerating && content && (
+                    {!isGenerating && !error && (content || mindMapImageUri) && (
                         <View style={styles.contentActions}>
-                            <TouchableOpacity style={styles.actionButton}>
-                                <Ionicons name="copy-outline" size={18} color={Theme.primary} />
-                                <Text style={styles.actionButtonText}>Copy</Text>
-                            </TouchableOpacity>
+                            {selectedOption !== 'mindmap' && (
+                                <TouchableOpacity style={styles.actionButton}>
+                                    <Ionicons name="copy-outline" size={18} color={Theme.primary} />
+                                    <Text style={styles.actionButtonText}>Copy</Text>
+                                </TouchableOpacity>
+                            )}
                             <TouchableOpacity style={styles.actionButton}>
                                 <Ionicons name="share-outline" size={18} color={Theme.primary} />
                                 <Text style={styles.actionButtonText}>Share</Text>
@@ -311,6 +375,47 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: Theme.primary,
+    },
+    errorContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        gap: 12,
+    },
+    errorText: {
+        fontSize: 15,
+        color: Theme.textSecondary,
+        textAlign: 'center',
+        lineHeight: 22,
+    },
+    retryButton: {
+        marginTop: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        backgroundColor: Theme.primary,
+        borderRadius: 8,
+    },
+    retryButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#FFF',
+    },
+    imageContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+    },
+    mindMapImage: {
+        width: '100%',
+        minHeight: 400,
+        borderRadius: 12,
+        backgroundColor: Theme.surfaceHighlight,
+    },
+    generatingSubtext: {
+        fontSize: 14,
+        color: Theme.textTertiary,
+        marginTop: 4,
     },
 });
 

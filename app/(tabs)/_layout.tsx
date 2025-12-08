@@ -9,6 +9,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { RecordButton } from '@/components/RecordButton';
 import AIService from '@/services/AIService';
 import AudioService from '@/services/AudioService';
+import { useFolderStore } from '@/store/useFolderStore';
 import { useProjectStore } from '@/store/useProjectStore';
 
 export default function TabLayout() {
@@ -22,6 +23,7 @@ export default function TabLayout() {
     addProject,
     setProcessing
   } = useProjectStore();
+  const { currentFolderId, folderNavigationStack } = useFolderStore();
 
   useEffect(() => {
     AudioService.requestPermissions();
@@ -83,45 +85,31 @@ export default function TabLayout() {
           return;
         }
 
-        // Generate scenes from transcript
-        let scenes;
-        try {
-          scenes = await AIService.generateScenes(transcript);
-          if (!scenes || scenes.length === 0) {
-            // If no scenes generated, create a default scene
-            scenes = [{
-              id: '1',
-              description: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-              imagePrompt: transcript,
-              imageUrl: "https://picsum.photos/seed/default/800/600",
-              duration: 3000,
-            }];
-          }
-        } catch (sceneError) {
-          console.error("Scene generation error:", sceneError);
-          // Continue with default scene if generation fails
-          scenes = [{
-            id: '1',
-            description: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-            imagePrompt: transcript,
-            imageUrl: "https://picsum.photos/seed/default/800/600",
-            duration: 3000,
-          }];
-        }
-
-        // Create new project
+        // Create new project with just the transcript
+        // User can create videos/scenes/summaries/etc. from the Create tab later
+        // Get the current folder ID from the navigation stack (most recent folder)
+        const folderId = folderNavigationStack.length > 0 
+          ? folderNavigationStack[folderNavigationStack.length - 1] 
+          : currentFolderId;
+        
         const projectId = Date.now().toString();
+        const now = new Date();
         const newProject = {
           id: projectId,
           title: `Project ${projects.length + 1}`,
-          date: new Date(),
+          date: now,
+          updatedAt: now,
           audioUri: uri,
           transcript,
-          scenes,
+          videos: [], // Empty - user creates videos from Create tab
+          folderId: folderId, // Use folder from navigation stack or current folder
+          tags: [],
         };
+        
+        console.log('Creating project with folderId:', folderId, 'currentFolderId:', currentFolderId, 'stack:', folderNavigationStack);
 
-        // Save to store
-        addProject(newProject);
+        // Save to store and database
+        await addProject(newProject);
         setProcessing(false);
 
         // Navigate to editor

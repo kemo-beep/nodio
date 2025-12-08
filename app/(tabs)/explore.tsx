@@ -9,7 +9,11 @@ import { useProjectStore } from '../../store/useProjectStore';
 export default function ProfileScreen() {
   const { projects } = useProjectStore();
   
-  const totalScenes = projects.reduce((sum, project) => sum + project.scenes.length, 0);
+  const totalScenes = projects.reduce((sum, project) => {
+    const projectScenes = project.videos?.reduce((videoSum, video) => 
+      videoSum + (video.scenes?.length || 0), 0) || 0;
+    return sum + projectScenes;
+  }, 0);
   const stats = [
     { label: 'Projects', value: projects.length, icon: 'folder-outline' },
     { label: 'Scenes', value: totalScenes, icon: 'film-outline' },

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Theme } from '../constants/Colors';
 
 type ToolType = 'summarize' | 'rewrite' | 'translate';
@@ -11,9 +12,24 @@ interface WritingToolsProps {
     toolType: ToolType | null;
     onClose: () => void;
     onApply: (transformedText: string) => void;
-    onTransform: (text: string, tool: ToolType) => Promise<string>;
+    onTransform: (text: string, tool: ToolType, targetLanguage?: string) => Promise<string>;
     isProcessing: boolean;
 }
+
+const LANGUAGES = [
+    { code: 'Spanish', name: 'Spanish' },
+    { code: 'French', name: 'French' },
+    { code: 'German', name: 'German' },
+    { code: 'Italian', name: 'Italian' },
+    { code: 'Portuguese', name: 'Portuguese' },
+    { code: 'Chinese', name: 'Chinese' },
+    { code: 'Japanese', name: 'Japanese' },
+    { code: 'Korean', name: 'Korean' },
+    { code: 'Arabic', name: 'Arabic' },
+    { code: 'Russian', name: 'Russian' },
+    { code: 'Hindi', name: 'Hindi' },
+    { code: 'Dutch', name: 'Dutch' },
+];
 
 export const WritingTools: React.FC<WritingToolsProps> = ({
     visible,
@@ -26,39 +42,79 @@ export const WritingTools: React.FC<WritingToolsProps> = ({
 }) => {
     const [transformedText, setTransformedText] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [selectedLanguage, setSelectedLanguage] = useState<string>('Spanish');
+    const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
     React.useEffect(() => {
-        if (visible && toolType && originalText) {
-            generateTransformation();
+        if (visible && toolType) {
+            if (toolType === 'translate') {
+                setShowLanguagePicker(true);
+                setTransformedText('');
+            } else {
+                setShowLanguagePicker(false);
+                if (originalText) {
+                    generateTransformation();
+                }
+            }
         } else {
             setTransformedText('');
+            setShowLanguagePicker(false);
         }
-    }, [visible, toolType, originalText]);
+    }, [visible, toolType]);
 
-    const generateTransformation = async () => {
+    const generateTransformation = async (language?: string) => {
         if (!toolType || !originalText) return;
         
         setIsGenerating(true);
+        setTransformedText('');
         try {
-            const result = await onTransform(originalText, toolType);
-            setTransformedText(result);
-        } catch (error) {
+            const result = await onTransform(originalText, toolType, language || selectedLanguage);
+            if (result && result.trim().length > 0) {
+                setTransformedText(result);
+                setShowLanguagePicker(false);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+                throw new Error('Empty response received');
+            }
+        } catch (error: any) {
             console.error('Transformation error:', error);
-            setTransformedText('Failed to generate transformation. Please try again.');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const errorMessage = error?.message || 'Unknown error';
+            setTransformedText(`Failed to generate transformation. ${errorMessage.includes('API key') ? 'Please check your API configuration.' : 'Please try again.'}`);
         } finally {
             setIsGenerating(false);
         }
     };
 
+    const handleLanguageSelect = (language: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setSelectedLanguage(language);
+        setShowLanguagePicker(false);
+        generateTransformation(language);
+    };
+
     const handleApply = () => {
         if (transformedText) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Keyboard.dismiss();
             onApply(transformedText);
             onClose();
         }
     };
 
     const handleRegenerate = () => {
-        generateTransformation();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (toolType === 'translate') {
+            generateTransformation(selectedLanguage);
+        } else {
+            generateTransformation();
+        }
+    };
+
+    const handleClose = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Keyboard.dismiss();
+        onClose();
     };
 
     const getToolLabel = () => {
@@ -81,7 +137,7 @@ export const WritingTools: React.FC<WritingToolsProps> = ({
             case 'rewrite':
                 return 'Improve clarity and flow';
             case 'translate':
-                return 'Translate to Spanish';
+                return `Translate to ${selectedLanguage}`;
             default:
                 return '';
         }
@@ -107,17 +163,50 @@ export const WritingTools: React.FC<WritingToolsProps> = ({
                                 <Text style={styles.headerDescription}>{getToolDescription()}</Text>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
                             <Ionicons name="close" size={24} color={Theme.text} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Content */}
-                    <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-                        {isGenerating ? (
+                    <ScrollView 
+                        style={styles.content} 
+                        contentContainerStyle={styles.contentContainer}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {showLanguagePicker && toolType === 'translate' ? (
+                            <View style={styles.languagePickerContainer}>
+                                <Text style={styles.languagePickerTitle}>Select Target Language</Text>
+                                <Text style={styles.languagePickerSubtitle}>Choose the language to translate to</Text>
+                                <View style={styles.languageGrid}>
+                                    {LANGUAGES.map((lang) => (
+                                        <TouchableOpacity
+                                            key={lang.code}
+                                            style={[
+                                                styles.languageOption,
+                                                selectedLanguage === lang.code && styles.languageOptionSelected
+                                            ]}
+                                            onPress={() => handleLanguageSelect(lang.code)}
+                                            activeOpacity={0.7}
+                                        >
+                                            {selectedLanguage === lang.code && (
+                                                <Ionicons name="checkmark-circle" size={18} color={Theme.primary} style={styles.languageCheckIcon} />
+                                            )}
+                                            <Text style={[
+                                                styles.languageOptionText,
+                                                selectedLanguage === lang.code && styles.languageOptionTextSelected
+                                            ]}>
+                                                {lang.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        ) : isGenerating ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={Theme.primary} />
-                                <Text style={styles.loadingText}>Generating...</Text>
+                                <Text style={styles.loadingText}>Generating with AI...</Text>
+                                <Text style={styles.loadingSubtext}>This may take a few seconds</Text>
                             </View>
                         ) : (
                             <>
@@ -139,6 +228,7 @@ export const WritingTools: React.FC<WritingToolsProps> = ({
                                             onPress={handleRegenerate}
                                             style={styles.regenerateButton}
                                             disabled={isGenerating}
+                                            activeOpacity={0.7}
                                         >
                                             <Ionicons name="refresh" size={16} color={Theme.primary} />
                                             <Text style={styles.regenerateText}>Regenerate</Text>
@@ -152,6 +242,7 @@ export const WritingTools: React.FC<WritingToolsProps> = ({
                                         placeholder="Transformed text will appear here..."
                                         placeholderTextColor={Theme.textTertiary}
                                         textAlignVertical="top"
+                                        editable={!isGenerating}
                                     />
                                 </View>
                             </>
@@ -159,19 +250,34 @@ export const WritingTools: React.FC<WritingToolsProps> = ({
                     </ScrollView>
 
                     {/* Footer Actions */}
-                    {!isGenerating && transformedText && (
+                    {!isGenerating && !showLanguagePicker && transformedText && (
                         <View style={styles.footer}>
                             <TouchableOpacity
                                 style={styles.cancelButton}
-                                onPress={onClose}
+                                onPress={handleClose}
+                                activeOpacity={0.7}
                             >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.applyButton}
+                                style={[styles.applyButton, !transformedText && styles.applyButtonDisabled]}
                                 onPress={handleApply}
+                                disabled={!transformedText}
+                                activeOpacity={0.8}
                             >
+                                <Ionicons name="checkmark" size={18} color="#FFF" style={{ marginRight: 6 }} />
                                 <Text style={styles.applyButtonText}>Apply</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    {showLanguagePicker && (
+                        <View style={styles.footer}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={handleClose}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -240,7 +346,14 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 16,
+        fontWeight: '600',
+        color: Theme.text,
+        marginTop: 12,
+    },
+    loadingSubtext: {
+        fontSize: 14,
         color: Theme.textSecondary,
+        marginTop: 4,
     },
     section: {
         marginBottom: 24,
@@ -317,8 +430,10 @@ const styles = StyleSheet.create({
     },
     applyButton: {
         flex: 1,
+        flexDirection: 'row',
         paddingVertical: 14,
         alignItems: 'center',
+        justifyContent: 'center',
         borderRadius: 12,
         backgroundColor: Theme.primary,
     },
@@ -326,6 +441,56 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#FFF',
+    },
+    languagePickerContainer: {
+        paddingVertical: 20,
+    },
+    languagePickerTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: Theme.text,
+        marginBottom: 4,
+    },
+    languagePickerSubtitle: {
+        fontSize: 14,
+        color: Theme.textSecondary,
+        marginBottom: 20,
+    },
+    languageGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    languageOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 10,
+        backgroundColor: Theme.surfaceHighlight,
+        borderWidth: 1.5,
+        borderColor: Theme.border,
+        minWidth: '30%',
+    },
+    languageOptionSelected: {
+        backgroundColor: Theme.primary + '20',
+        borderColor: Theme.primary,
+        borderWidth: 2,
+    },
+    languageCheckIcon: {
+        marginRight: 6,
+    },
+    languageOptionText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: Theme.text,
+    },
+    languageOptionTextSelected: {
+        color: Theme.primary,
+        fontWeight: '700',
+    },
+    applyButtonDisabled: {
+        opacity: 0.5,
     },
 });
 

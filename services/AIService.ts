@@ -389,18 +389,27 @@ Generate scenes for this transcript:\n\n${transcript}`
         return `https://picsum.photos/seed/${Math.random()}/800/600`;
     }
 
-    async transformText(text: string, type: 'summarize' | 'rewrite' | 'translate'): Promise<string> {
+    async transformText(text: string, type: 'summarize' | 'rewrite' | 'translate', targetLanguage?: string): Promise<string> {
         if (!GEMINI_API_KEY) {
             // Fallback to simple transformations
             return this.simpleTransformText(text, type);
         }
 
         try {
-            const prompts = {
-                summarize: 'You are a text summarizer. Provide a concise summary of the given text.',
-                rewrite: 'You are a text rewriter. Rewrite the given text to improve clarity and flow while maintaining the original meaning.',
-                translate: 'You are a translator. Translate the given text to Spanish. Return only the translated text.',
-            };
+            let prompt = '';
+            
+            switch (type) {
+                case 'summarize':
+                    prompt = 'You are a text summarizer. Provide a concise summary of the given text. Return only the summary, no additional commentary.';
+                    break;
+                case 'rewrite':
+                    prompt = 'You are a text rewriter. Rewrite the given text to improve clarity and flow while maintaining the original meaning. Return only the rewritten text.';
+                    break;
+                case 'translate':
+                    const language = targetLanguage || 'Spanish';
+                    prompt = `You are a translator. Translate the given text to ${language}. Return only the translated text, no additional commentary or explanations.`;
+                    break;
+            }
 
             const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
                 method: 'POST',
@@ -410,7 +419,7 @@ Generate scenes for this transcript:\n\n${transcript}`
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
-                            text: `${prompts[type]}\n\nText:\n${text}`
+                            text: `${prompt}\n\nText:\n${text}`
                         }]
                     }],
                     generationConfig: {
@@ -420,11 +429,19 @@ Generate scenes for this transcript:\n\n${transcript}`
             });
 
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Gemini API Error:', errorText);
                 return this.simpleTransformText(text, type);
             }
 
             const data = await response.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || text;
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!result || result.trim().length === 0) {
+                throw new Error('Empty response from Gemini API');
+            }
+            
+            return result.trim();
         } catch (error) {
             console.error('Text transformation error:', error);
             return this.simpleTransformText(text, type);
@@ -443,6 +460,433 @@ Generate scenes for this transcript:\n\n${transcript}`
             return text; // Return as-is for translate (would need real translation service)
         }
         return text;
+    }
+
+    /**
+     * Create bullet points from transcript using Gemini AI
+     */
+    async createBulletPoints(transcript: string): Promise<string> {
+        if (!GEMINI_API_KEY) {
+            return this.simpleBulletPoints(transcript);
+        }
+
+        try {
+            const prompt = `You are a content organizer. Extract the key points from the following transcript and format them as a clear, well-organized bullet point list. 
+Each bullet point should be concise but informative. Use proper bullet formatting with "•" or "-" symbols.
+
+Return ONLY the bullet points, no additional commentary or explanations.
+
+Transcript:
+${transcript}`;
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Gemini API Error:', errorText);
+                return this.simpleBulletPoints(transcript);
+            }
+
+            const data = await response.json();
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!result || result.trim().length === 0) {
+                throw new Error('Empty response from Gemini API');
+            }
+            
+            return result.trim();
+        } catch (error) {
+            console.error('Bullet points creation error:', error);
+            return this.simpleBulletPoints(transcript);
+        }
+    }
+
+    /**
+     * Create journal entry from transcript using Gemini AI
+     */
+    async createJournalEntry(transcript: string): Promise<string> {
+        if (!GEMINI_API_KEY) {
+            return this.simpleJournalEntry(transcript);
+        }
+
+        try {
+            const prompt = `You are a journal writer. Transform the following transcript into a well-written journal entry. 
+The journal entry should:
+- Have a natural, reflective tone
+- Include the date (use today's date)
+- Organize the content in a narrative format
+- Add personal reflections and insights where appropriate
+- Be engaging and readable
+
+Return ONLY the journal entry, no additional commentary.
+
+Transcript:
+${transcript}`;
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.8,
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Gemini API Error:', errorText);
+                return this.simpleJournalEntry(transcript);
+            }
+
+            const data = await response.json();
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!result || result.trim().length === 0) {
+                throw new Error('Empty response from Gemini API');
+            }
+            
+            return result.trim();
+        } catch (error) {
+            console.error('Journal entry creation error:', error);
+            return this.simpleJournalEntry(transcript);
+        }
+    }
+
+    /**
+     * Create meeting notes from transcript using Gemini AI
+     */
+    async createMeetingNotes(transcript: string): Promise<string> {
+        if (!GEMINI_API_KEY) {
+            return this.simpleMeetingNotes(transcript);
+        }
+
+        try {
+            const prompt = `You are a meeting notes organizer. Transform the following transcript into professional meeting notes. 
+The meeting notes should include:
+- Meeting title/subject
+- Key discussion points
+- Decisions made
+- Action items (if any)
+- Next steps (if any)
+
+Format it clearly with sections and bullet points where appropriate.
+
+Return ONLY the meeting notes, no additional commentary.
+
+Transcript:
+${transcript}`;
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Gemini API Error:', errorText);
+                return this.simpleMeetingNotes(transcript);
+            }
+
+            const data = await response.json();
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!result || result.trim().length === 0) {
+                throw new Error('Empty response from Gemini API');
+            }
+            
+            return result.trim();
+        } catch (error) {
+            console.error('Meeting notes creation error:', error);
+            return this.simpleMeetingNotes(transcript);
+        }
+    }
+
+    /**
+     * Create todo list from transcript using Gemini AI
+     */
+    async createTodoList(transcript: string): Promise<string> {
+        if (!GEMINI_API_KEY) {
+            return this.simpleTodoList(transcript);
+        }
+
+        try {
+            const prompt = `You are a task extractor. Extract all actionable items, tasks, and to-dos from the following transcript. 
+Format them as a clear todo list with checkboxes [ ].
+
+Each item should be:
+- Actionable and specific
+- Clear and concise
+- In the order they appear or by priority
+
+Return ONLY the todo list, no additional commentary.
+
+Transcript:
+${transcript}`;
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Gemini API Error:', errorText);
+                return this.simpleTodoList(transcript);
+            }
+
+            const data = await response.json();
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!result || result.trim().length === 0) {
+                throw new Error('Empty response from Gemini API');
+            }
+            
+            return result.trim();
+        } catch (error) {
+            console.error('Todo list creation error:', error);
+            return this.simpleTodoList(transcript);
+        }
+    }
+
+    /**
+     * Create mind map image from transcript using Gemini 3 Pro Image Preview model
+     */
+    async createMindMapImage(transcript: string): Promise<string> {
+        if (!GEMINI_API_KEY) {
+            throw new Error('Google Gemini API key not configured for mind map generation');
+        }
+
+        try {
+            // Use gemini-3-pro-image-preview model for image generation
+            const MIND_MAP_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent';
+
+            const prompt = `Create a visual mind map diagram based on the following transcript. 
+The mind map should:
+- Have a central topic in the center
+- Show main branches with key concepts
+- Include sub-branches with supporting details
+- Be visually clear and organized
+- Use colors and visual hierarchy to show relationships
+
+Generate a mind map image that represents the structure and key ideas from this transcript:
+
+${transcript}`;
+
+            const response = await fetch(`${MIND_MAP_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Gemini Mind Map API Error:', errorText);
+                throw new Error(`Mind map generation failed: ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            // Log the full response for debugging
+            console.log('Mind Map API Response:', JSON.stringify(data, null, 2));
+            
+            // Check for image in response (Gemini 3 Pro Image Preview returns images)
+            const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inline_data);
+            
+            if (imagePart?.inline_data?.data) {
+                // Return base64 data URI
+                return `data:${imagePart.inline_data.mime_type || 'image/png'};base64,${imagePart.inline_data.data}`;
+            }
+
+            // If no image, check for text response with image URL or reference
+            const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textResponse) {
+                console.log('Mind Map text response:', textResponse);
+                // Try to extract image URL if present
+                const urlMatch = textResponse.match(/https?:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp)/i);
+                if (urlMatch) {
+                    return urlMatch[0];
+                }
+                
+                // If we got text but no image, the model might not support direct image generation
+                // Fall back to generating a structured text-based mind map
+                console.warn('Gemini model returned text instead of image. Generating text-based mind map structure.');
+                return await this.generateTextBasedMindMap(transcript);
+            }
+
+            // If we get here, the response structure is unexpected
+            console.error('Unexpected response structure:', data);
+            throw new Error('No image data received from Gemini API. The model may not support direct image generation.');
+        } catch (error: any) {
+            console.error('Mind map image creation error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Generate a text-based mind map structure as fallback
+     */
+    private async generateTextBasedMindMap(transcript: string): Promise<string> {
+        if (!GEMINI_API_KEY) {
+            return this.simpleMindMapText(transcript);
+        }
+
+        try {
+            const prompt = `Create a detailed mind map structure based on the following transcript. 
+Format it as a hierarchical text structure showing:
+- Central topic (main theme)
+- Main branches (key concepts, 3-5 main points)
+- Sub-branches (supporting details for each main point)
+
+Use indentation and visual markers like this format:
+CENTRAL TOPIC
+  ├─ Main Branch 1
+  │   ├─ Sub-branch 1.1
+  │   └─ Sub-branch 1.2
+  ├─ Main Branch 2
+  │   ├─ Sub-branch 2.1
+  │   └─ Sub-branch 2.2
+  └─ Main Branch 3
+
+Transcript:
+${transcript}`;
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                    }
+                }),
+            });
+
+            if (!response.ok) {
+                return this.simpleMindMapText(transcript);
+            }
+
+            const data = await response.json();
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (result && result.trim().length > 0) {
+                return result.trim();
+            }
+            
+            return this.simpleMindMapText(transcript);
+        } catch (error) {
+            console.error('Text-based mind map generation error:', error);
+            return this.simpleMindMapText(transcript);
+        }
+    }
+
+    // Fallback methods
+    private simpleBulletPoints(transcript: string): string {
+        return transcript
+            .split(/[.!?]+/)
+            .filter(s => s.trim().length > 0)
+            .slice(0, 8)
+            .map(s => `• ${s.trim()}`)
+            .join('\n');
+    }
+
+    private simpleJournalEntry(transcript: string): string {
+        const date = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        return `Journal Entry - ${date}\n\n${transcript}\n\nReflection: This transcript captured important thoughts and discussions that I want to remember.`;
+    }
+
+    private simpleMeetingNotes(transcript: string): string {
+        return `Meeting Notes\n\nKey Points:\n${transcript.split(/[.!?]+/).filter(s => s.trim().length > 0).slice(0, 5).map(s => `• ${s.trim()}`).join('\n')}\n\nAction Items:\n- Review and follow up on discussed topics`;
+    }
+
+    private simpleTodoList(transcript: string): string {
+        return transcript
+            .split(/[.!?]/)
+            .filter(s => s.trim().length > 10)
+            .slice(0, 5)
+            .map(s => `[ ] ${s.trim()}`)
+            .join('\n');
+    }
+
+    private simpleMindMapText(transcript: string): string {
+        const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        const mainPoints = sentences.slice(0, 4);
+        const centralTopic = transcript.substring(0, 50).trim() + (transcript.length > 50 ? '...' : '');
+        
+        let mindMap = `CENTRAL TOPIC: ${centralTopic}\n\n`;
+        mainPoints.forEach((point, index) => {
+            mindMap += `  ├─ Main Point ${index + 1}: ${point.trim().substring(0, 60)}\n`;
+        });
+        
+        return mindMap;
     }
 }
 

@@ -1,15 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Keyboard, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { CreateTab } from '../../components/CreateTab';
+import { TagChip } from '../../components/TagChip';
+import { TagSelector } from '../../components/TagSelector';
+import { TitleEditor } from '../../components/TitleEditor';
 import { WritingTools } from '../../components/WritingTools';
 import { Theme } from '../../constants/Colors';
 import { CommonStyles } from '../../constants/Styles';
 import AIService from '../../services/AIService';
+import { useFolderStore } from '../../store/useFolderStore';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useTagStore } from '../../store/useTagStore';
 
 export default function EditorScreen() {
     const { id } = useLocalSearchParams();
@@ -18,7 +24,12 @@ export default function EditorScreen() {
         setCurrentProject,
         currentProject,
         updateProjectTranscript,
+        updateProjectTitle,
+        addTagsToProject,
+        removeTagFromProject,
     } = useProjectStore();
+    const { getFolderById } = useFolderStore();
+    const { getTagById } = useTagStore();
 
     const [activeTab, setActiveTab] = useState<'notes' | 'transcript' | 'create'>('notes');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -27,10 +38,13 @@ export default function EditorScreen() {
     const [isLoadingSummary, setIsLoadingSummary] = useState(false);
     const [writingToolVisible, setWritingToolVisible] = useState(false);
     const [selectedTool, setSelectedTool] = useState<'summarize' | 'rewrite' | 'translate' | null>(null);
+    const [tagSelectorVisible, setTagSelectorVisible] = useState(false);
 
     useEffect(() => {
         if (id) {
-            setCurrentProject(id as string);
+            setCurrentProject(id as string).catch((error) => {
+                console.error('Failed to load project:', error);
+            });
         }
     }, [id, setCurrentProject]);
 
@@ -113,14 +127,15 @@ export default function EditorScreen() {
     };
 
     const handleToolPress = (tool: 'summarize' | 'rewrite' | 'translate') => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setSelectedTool(tool);
         setWritingToolVisible(true);
     };
 
-    const handleTransformText = async (text: string, tool: 'summarize' | 'rewrite' | 'translate'): Promise<string> => {
+    const handleTransformText = async (text: string, tool: 'summarize' | 'rewrite' | 'translate', targetLanguage?: string): Promise<string> => {
         setIsProcessing(true);
         try {
-            const transformedText = await AIService.transformText(text, tool);
+            const transformedText = await AIService.transformText(text, tool, targetLanguage);
             return transformedText;
         } catch (error) {
             console.error('Text transformation error:', error);
@@ -136,6 +151,8 @@ export default function EditorScreen() {
         } else {
             updateProjectTranscript(currentProject.id, transformedText);
         }
+        // Show success feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
     return (
@@ -155,10 +172,63 @@ export default function EditorScreen() {
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 {/* Title Section */}
                 <View style={styles.titleSection}>
-                    <Text style={styles.title}>{currentProject.title}</Text>
-                    <Text style={styles.metadata}>
-                        {formatDate(currentProject.date)} • {formatDuration(audioDuration)}
-                    </Text>
+                    <TitleEditor
+                        title={currentProject.title}
+                        onSave={(newTitle) => updateProjectTitle(currentProject.id, newTitle)}
+                        placeholder="Untitled Project"
+                        style={styles.titleEditor}
+                    />
+                    <View style={styles.metadataContainer}>
+                        <Text style={styles.metadata}>
+                            {formatDate(currentProject.date)} • {formatDuration(audioDuration)}
+                        </Text>
+                        {currentProject.folderId && (
+                            <>
+                                <Text style={styles.metadataSeparator}>•</Text>
+                                <Text style={styles.metadata}>
+                                    {getFolderById(currentProject.folderId)?.name || 'Folder'}
+                                </Text>
+                            </>
+                        )}
+                    </View>
+
+                    {/* Tags Section */}
+                    <View style={styles.tagsSection}>
+                        <View style={styles.tagsHeader}>
+                            <Text style={styles.tagsSectionTitle}>Tags</Text>
+                            <TouchableOpacity
+                                onPress={() => setTagSelectorVisible(true)}
+                                style={styles.addTagButton}
+                            >
+                                <Ionicons name="add-circle-outline" size={20} color={Theme.primary} />
+                                <Text style={styles.addTagText}>Add Tags</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {currentProject.tags && currentProject.tags.length > 0 ? (
+                            <View style={styles.tagsContainer}>
+                                {currentProject.tags.map((tagId) => {
+                                    const tag = getTagById(tagId);
+                                    if (!tag) return null;
+                                    return (
+                                        <View key={tagId} style={styles.tagWrapper}>
+                                            <TagChip
+                                                tag={tag}
+                                                size="medium"
+                                                showRemove
+                                                onRemove={() => removeTagFromProject(currentProject.id, tagId)}
+                                            />
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        ) : (
+                            <View style={styles.emptyTagsContainer}>
+                            <Text style={styles.emptyTagsText}>
+                                No tags. Tap &quot;Add Tags&quot; to organize this project.
+                            </Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
                 {/* Audio Player */}
@@ -172,19 +242,31 @@ export default function EditorScreen() {
                 <View style={styles.tabBar}>
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'notes' && styles.activeTab]}
-                        onPress={() => setActiveTab('notes')}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setActiveTab('notes');
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>AI Notes</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'transcript' && styles.activeTab]}
-                        onPress={() => setActiveTab('transcript')}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setActiveTab('transcript');
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text style={[styles.tabText, activeTab === 'transcript' && styles.activeTabText]}>Transcript</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'create' && styles.activeTab]}
-                        onPress={() => setActiveTab('create')}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setActiveTab('create');
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>Create</Text>
                     </TouchableOpacity>
@@ -202,6 +284,7 @@ export default function EditorScreen() {
                                         style={[styles.toolCard, isProcessing && styles.toolCardDisabled]}
                                         onPress={() => handleToolPress('summarize')}
                                         disabled={isProcessing}
+                                        activeOpacity={0.7}
                                     >
                                         <View style={styles.toolIconContainer}>
                                             <Ionicons name="flash" size={20} color={Theme.primary} />
@@ -212,6 +295,7 @@ export default function EditorScreen() {
                                         style={[styles.toolCard, isProcessing && styles.toolCardDisabled]}
                                         onPress={() => handleToolPress('rewrite')}
                                         disabled={isProcessing}
+                                        activeOpacity={0.7}
                                     >
                                         <View style={styles.toolIconContainer}>
                                             <Ionicons name="create" size={20} color={Theme.primary} />
@@ -222,6 +306,7 @@ export default function EditorScreen() {
                                         style={[styles.toolCard, isProcessing && styles.toolCardDisabled]}
                                         onPress={() => handleToolPress('translate')}
                                         disabled={isProcessing}
+                                        activeOpacity={0.7}
                                     >
                                         <View style={styles.toolIconContainer}>
                                             <Ionicons name="language" size={20} color={Theme.primary} />
@@ -239,10 +324,15 @@ export default function EditorScreen() {
                                         <ActivityIndicator size="small" color={Theme.primary} />
                                         <Text style={styles.loadingTextSmall}>Generating summary...</Text>
                                     </View>
-                                ) : (
+                                ) : summary ? (
                                     <View style={styles.summaryBox}>
-                                        <Text style={styles.summaryText}>
-                                            {summary || 'Click "Summarize" above to generate an AI summary of your transcript.'}
+                                        <Text style={styles.summaryText}>{summary}</Text>
+                                    </View>
+                                ) : (
+                                    <View style={styles.emptySummaryBox}>
+                                        <Ionicons name="document-text-outline" size={32} color={Theme.textTertiary} />
+                                        <Text style={styles.emptySummaryText}>
+                                            Click &quot;Summarize&quot; above to generate an AI summary of your transcript.
                                         </Text>
                                     </View>
                                 )}
@@ -260,6 +350,7 @@ export default function EditorScreen() {
                                 placeholder="Start speaking or typing..."
                                 placeholderTextColor={Theme.textTertiary}
                                 textAlignVertical="top"
+                                onBlur={() => Keyboard.dismiss()}
                             />
                         </View>
                     )}
@@ -290,6 +381,25 @@ export default function EditorScreen() {
                     <Text style={styles.loadingText}>AI Processing...</Text>
                 </View>
             )}
+
+            {/* Tag Selector Modal */}
+            <TagSelector
+                visible={tagSelectorVisible}
+                selectedTagIds={currentProject.tags || []}
+                onSelect={(tagIds) => {
+                    const currentTags = currentProject.tags || [];
+                    const addedTags = tagIds.filter(id => !currentTags.includes(id));
+                    const removedTags = currentTags.filter(id => !tagIds.includes(id));
+                    
+                    if (addedTags.length > 0) {
+                        addTagsToProject(currentProject.id, addedTags);
+                    }
+                    removedTags.forEach(tagId => {
+                        removeTagFromProject(currentProject.id, tagId);
+                    });
+                }}
+                onClose={() => setTagSelectorVisible(false)}
+            />
         </SafeAreaView>
     );
 }
@@ -310,16 +420,73 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingBottom: 12,
     },
-    title: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: Theme.text,
+    titleEditor: {
         marginBottom: 8,
+    },
+    metadataContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
     },
     metadata: {
         fontSize: 13,
         color: Theme.textSecondary,
         fontWeight: '500',
+    },
+    metadataSeparator: {
+        fontSize: 13,
+        color: Theme.textTertiary,
+        marginHorizontal: 6,
+    },
+    tagsSection: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: Theme.border,
+    },
+    tagsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    tagsSectionTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Theme.text,
+    },
+    addTagButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        padding: 4,
+    },
+    addTagText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Theme.primary,
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    tagWrapper: {
+        marginBottom: 4,
+    },
+    emptyTagsContainer: {
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        backgroundColor: Theme.surface,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Theme.border,
+        borderStyle: 'dashed',
+    },
+    emptyTagsText: {
+        fontSize: 13,
+        color: Theme.textSecondary,
+        textAlign: 'center',
     },
     audioPlayerContainer: {
         paddingHorizontal: 20,
@@ -418,6 +585,24 @@ const styles = StyleSheet.create({
         fontSize: 16,
         lineHeight: 24,
         color: Theme.text,
+    },
+    emptySummaryBox: {
+        backgroundColor: Theme.surfaceHighlight,
+        borderRadius: 12,
+        padding: 24,
+        borderWidth: 1,
+        borderColor: Theme.border,
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 120,
+    },
+    emptySummaryText: {
+        fontSize: 14,
+        color: Theme.textSecondary,
+        textAlign: 'center',
+        marginTop: 12,
+        lineHeight: 20,
     },
     loadingContainer: {
         flexDirection: 'row',
