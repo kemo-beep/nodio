@@ -82,27 +82,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: Theme.surface,
         padding: 16,
-        borderRadius: 20,
+        borderRadius: 24,
         marginBottom: 12,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.03)',
+        ...Theme.shadows.small, // Use consistent shadow
+        // Remove border for cleaner look
     },
     iconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(0,122,255,0.08)',
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: Theme.surfaceHighlight,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 14,
+        marginRight: 16,
     },
     content: {
         flex: 1,
@@ -112,7 +104,7 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: '600',
         color: Theme.text,
-        marginBottom: 4,
+        marginBottom: 6,
         letterSpacing: -0.3,
     },
     metaContainer: {
@@ -129,7 +121,7 @@ const styles = StyleSheet.create({
         height: 3,
         borderRadius: 1.5,
         backgroundColor: Theme.textTertiary,
-        marginHorizontal: 6,
+        marginHorizontal: 8,
     },
     scenes: {
         fontSize: 13,
@@ -137,18 +129,18 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     arrowContainer: {
-        marginLeft: 8,
+        marginLeft: 12,
     },
     tagsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 8,
+        marginTop: 10,
         gap: 6,
     },
     tagChip: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
         marginRight: 4,
     },
     tagText: {

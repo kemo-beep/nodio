@@ -9,6 +9,7 @@ import Animated, {
     withSpring,
     withTiming
 } from 'react-native-reanimated';
+import { Theme } from '../constants/Colors';
 
 interface RecordButtonProps {
     isRecording: boolean;
@@ -76,15 +77,11 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#2F54EB', // Brand Blue
+        backgroundColor: Theme.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#2F54EB',
-        shadowOffset: { width: 0, height: 6 },
-        shadowRadius: 12,
-        shadowOpacity: 0.4,
-        elevation: 10,
+        ...Theme.shadows.large, // Prominent shadow for FAB
         borderWidth: 4,
-        borderColor: '#FFFFFF', // White border to separate from content/tab bar
+        borderColor: Theme.surface, // Matches tab bar/background
     },
 });

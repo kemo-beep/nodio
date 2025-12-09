@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -9,7 +10,6 @@ import { FolderListItem } from '../../components/FolderListItem';
 import { FolderModal } from '../../components/FolderModal';
 import { ProjectActionMenu } from '../../components/ProjectActionMenu';
 import { ProjectCard } from '../../components/ProjectCard';
-import { TagFilterChip } from '../../components/TagFilterChip';
 import { TagSelector } from '../../components/TagSelector';
 import { TitleEditor } from '../../components/TitleEditor';
 import { Theme } from '../../constants/Colors';
@@ -24,9 +24,9 @@ type ViewMode = 'folders' | 'folder-content';
 export default function HomeScreen() {
   const router = useRouter();
   const { projects, getProjectsByFolder, updateProjectTitle, moveProjectToFolder, deleteProject, addTagsToProject, removeTagFromProject, loadProjects } = useProjectStore();
-  const { 
-    folders, 
-    currentFolderId, 
+  const {
+    folders,
+    currentFolderId,
     folderNavigationStack,
     navigateToFolder,
     navigateBack,
@@ -35,7 +35,7 @@ export default function HomeScreen() {
     getFoldersByParent
   } = useFolderStore();
   const { tags } = useTagStore();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -153,17 +153,17 @@ export default function HomeScreen() {
   // Combined list of folders and projects for both views
   const combinedItems = useMemo(() => {
     const items: { type: 'folder' | 'project'; data: any }[] = [];
-    
+
     // Add folders first
     filteredFolders.forEach(folder => {
       items.push({ type: 'folder', data: folder });
     });
-    
+
     // Then add projects
     filteredProjects.forEach(project => {
       items.push({ type: 'project', data: project });
     });
-    
+
     return items;
   }, [filteredFolders, filteredProjects]);
 
@@ -264,128 +264,102 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FFFFFF', '#F2F4F7']}
+        colors={[Theme.background, Theme.background]} // Use solid background for now, or subtle gradient
         style={StyleSheet.absoluteFill}
       />
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
-          {viewMode === 'folder-content' ? (
-            <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={Theme.text} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>Nodio<Text style={styles.logoDot}>.</Text></Text>
-            </View>
-          )}
-          <View style={styles.headerTitle}>
-            {viewMode === 'folder-content' && currentFolder ? (
-              <Text style={styles.headerTitleText}>{currentFolder.name}</Text>
-            ) : (
-              <Text style={styles.headerTitleText}></Text>
-            )}
-          </View>
-          <View style={styles.headerActions}>
-            {viewMode === 'folders' && (
-              <TouchableOpacity 
-                style={styles.iconButton}
-                onPress={handleCreateFolder}
-              >
-                <Ionicons name="add-circle-outline" size={24} color={Theme.text} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Search and Filters - Show in both views */}
-        {(
-          <View style={styles.searchFilterSection}>
-            <View style={styles.searchContainer}>
-              <Ionicons name="search-outline" size={20} color={Theme.textSecondary} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search..."
-                placeholderTextColor={Theme.textTertiary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
-                  style={styles.clearButton}
-                >
-                  <Ionicons name="close-circle" size={20} color={Theme.textSecondary} />
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+        {/* Header with Glassmorphism */}
+        <BlurView intensity={80} tint="light" style={styles.headerBlur}>
+          <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+            <View style={styles.headerContent}>
+              {viewMode === 'folder-content' ? (
+                <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+                  <Ionicons name="chevron-back" size={28} color={Theme.primary} />
                 </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Filter Chips */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterContainer}
-              contentContainerStyle={styles.filterContent}
-            >
-              {filterOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.filterChip,
-                    filterType === option.value && styles.filterChipActive,
-                  ]}
-                  onPress={() => setFilterType(option.value)}
-                >
-                  <Ionicons
-                    name={option.icon as any}
-                    size={16}
-                    color={filterType === option.value ? '#FFFFFF' : Theme.textSecondary}
-                    style={styles.filterIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterType === option.value && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Tag Filters */}
-            {tags.length > 0 && (
-              <View style={styles.tagFiltersSection}>
-                <View style={styles.tagFiltersHeader}>
-                  <Text style={styles.tagFiltersTitle}>Filter by Tags</Text>
-                  {selectedTagIds.length > 0 && (
-                    <TouchableOpacity onPress={handleClearTagFilters} style={styles.clearTagsButton}>
-                      <Text style={styles.clearTagsText}>Clear</Text>
-                    </TouchableOpacity>
-                  )}
+              ) : (
+                <View style={styles.logoContainer}>
+                  <Text style={styles.headerTitleText}>Projects</Text>
                 </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.tagFiltersContainer}
-                  contentContainerStyle={styles.tagFiltersContent}
-                >
-                  {tags.map((tag) => (
-                    <TagFilterChip
-                      key={tag.id}
-                      tag={tag}
-                      isSelected={selectedTagIds.includes(tag.id)}
-                      onPress={() => handleToggleTagFilter(tag.id)}
-                    />
-                  ))}
-                </ScrollView>
+              )}
+              <View style={styles.headerTitle}>
+                {viewMode === 'folder-content' && currentFolder ? (
+                  <Text style={styles.headerTitleText}>{currentFolder.name}</Text>
+                ) : null}
               </View>
-            )}
-          </View>
-        )}
+              <View style={styles.headerActions}>
+                {viewMode === 'folders' && (
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={handleCreateFolder}
+                  >
+                    <Ionicons name="folder-open-outline" size={24} color={Theme.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Search and Filters */}
+            <View style={styles.searchFilterSection}>
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color={Theme.textSecondary} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search projects..."
+                  placeholderTextColor={Theme.textTertiary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    style={styles.clearButton}
+                  >
+                    <Ionicons name="close-circle" size={18} color={Theme.textTertiary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Filter Chips */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterContainer}
+                contentContainerStyle={styles.filterContent}
+              >
+                {filterOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.filterChip,
+                      filterType === option.value && styles.filterChipActive,
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setFilterType(option.value);
+                    }}
+                  >
+                    <Ionicons
+                      name={option.icon as any}
+                      size={14}
+                      color={filterType === option.value ? '#FFFFFF' : Theme.textSecondary}
+                      style={styles.filterIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        filterType === option.value && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </SafeAreaView>
+        </BlurView>
 
         {/* Content */}
         <FlatList
@@ -437,17 +411,23 @@ export default function HomeScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons 
-                name="search-outline" 
-                size={48} 
-                color={Theme.textTertiary} 
-              />
+              <View style={styles.emptyStateIconContainer}>
+                <Ionicons
+                  name={searchQuery ? "search" : "mic-outline"}
+                  size={48}
+                  color={Theme.primary}
+                  style={{ opacity: 0.8 }}
+                />
+              </View>
+              <Text style={styles.emptyStateTitle}>
+                {searchQuery ? 'No results found' : 'No projects yet'}
+              </Text>
               <Text style={styles.emptyStateText}>
                 {searchQuery || selectedTagIds.length > 0
-                  ? 'No items match your search.'
+                  ? 'Try adjusting your search or filters.'
                   : viewMode === 'folders'
-                  ? 'No folders or projects yet. Create your first folder or start recording!'
-                  : 'This folder is empty.'}
+                    ? 'Start recording your first idea or create a folder to get organized.'
+                    : 'This folder is empty.'}
               </Text>
             </View>
           }
@@ -456,12 +436,18 @@ export default function HomeScreen() {
         {/* New Folder Button - Only in folders view */}
         {viewMode === 'folders' && (
           <TouchableOpacity
-            style={styles.newFolderButton}
+            style={styles.fab}
             onPress={handleCreateFolder}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle" size={24} color={Theme.primary} />
-            <Text style={styles.newFolderButtonText}>New Folder</Text>
+            <LinearGradient
+              colors={['#2F54EB', '#597EF7']}
+              style={styles.fabGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="add" size={32} color="#FFFFFF" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </SafeAreaView>
@@ -489,11 +475,11 @@ export default function HomeScreen() {
           onSelect={(tagIds) => {
             const project = projects.find(p => p.id === tagSelectorProjectId);
             if (!project) return;
-            
+
             const currentTags = project.tags || [];
             const addedTags = tagIds.filter(id => !currentTags.includes(id));
             const removedTags = currentTags.filter(id => !tagIds.includes(id));
-            
+
             if (addedTags.length > 0) {
               addTagsToProject(tagSelectorProjectId, addedTags);
             }
@@ -519,13 +505,23 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  header: {
+  headerBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  headerSafeArea: {
+    backgroundColor: 'transparent',
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Theme.border,
   },
   backButton: {
     padding: 4,
@@ -547,9 +543,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitleText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 28, // Larger iOS style title
+    fontWeight: '800',
     color: Theme.text,
+    letterSpacing: -0.5,
   },
   breadcrumb: {
     fontSize: 12,
@@ -562,19 +559,18 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   iconButton: {
-    padding: 4,
+    padding: 8,
+    backgroundColor: Theme.surfaceSubtle,
+    borderRadius: 20,
   },
   searchFilterSection: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Theme.border,
+    paddingBottom: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.surface,
+    backgroundColor: 'rgba(118, 118, 128, 0.12)', // iOS Search Bar Color
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -585,7 +581,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
     color: Theme.text,
     padding: 0,
   },
@@ -594,7 +590,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   filterContainer: {
-    marginBottom: 8,
+    marginBottom: 0,
   },
   filterContent: {
     paddingRight: 16,
@@ -603,28 +599,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Theme.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginRight: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
+    ...Theme.shadows.small,
   },
   filterChipActive: {
-    backgroundColor: '#2F54EB',
-    borderColor: '#2F54EB',
+    backgroundColor: Theme.primary,
   },
   filterIcon: {
-    marginRight: 4,
+    marginRight: 6,
   },
   filterChipText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
     color: Theme.textSecondary,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   tagFiltersSection: {
     marginTop: 8,
@@ -658,6 +651,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   listContent: {
+    paddingTop: 180, // Space for the absolute header
     paddingBottom: 100,
   },
   projectCardWrapper: {
@@ -679,35 +673,46 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
     paddingHorizontal: 40,
   },
-  emptyStateText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: Theme.textSecondary,
+  emptyStateIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Theme.surfaceHighlight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Theme.text,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  newFolderButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    gap: 8,
+  emptyStateText: {
+    fontSize: 15,
+    color: Theme.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  newFolderButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  fab: {
+    position: 'absolute',
+    bottom: 32,
+    right: 24,
+    shadowColor: Theme.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  fabGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

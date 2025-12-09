@@ -38,10 +38,17 @@ export const SceneCard: React.FC<SceneCardProps> = ({ scene, index, onRegenerate
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: Theme.surfaceHighlight,
-        borderRadius: 16,
+        backgroundColor: Theme.surface,
+        borderRadius: 24,
         padding: 16,
         marginBottom: 16,
+        shadowColor: Theme.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: Theme.border,
     },
     header: {
         flexDirection: 'row',
@@ -59,15 +66,16 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         height: 200,
-        borderRadius: 12,
+        borderRadius: 16,
         overflow: 'hidden',
-        marginBottom: 12,
+        marginBottom: 16,
         position: 'relative',
+        backgroundColor: Theme.surfaceHighlight,
     },
     image: {
         width: '100%',
         height: '100%',
-        backgroundColor: '#333',
+        backgroundColor: Theme.surfaceHighlight,
     },
     regenerateBtn: {
         position: 'absolute',
@@ -79,6 +87,8 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     description: {
         fontSize: 15,

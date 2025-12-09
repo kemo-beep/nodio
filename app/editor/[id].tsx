@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -50,7 +51,7 @@ export default function EditorScreen() {
 
     const loadAudioDuration = useCallback(async () => {
         if (!currentProject?.audioUri) return;
-        
+
         try {
             const { sound } = await Audio.Sound.createAsync(
                 { uri: currentProject.audioUri },
@@ -68,7 +69,7 @@ export default function EditorScreen() {
 
     const loadSummary = useCallback(async () => {
         if (!currentProject?.transcript) return;
-        
+
         setIsLoadingSummary(true);
         try {
             const generatedSummary = await AIService.transformText(currentProject.transcript, 'summarize');
@@ -112,7 +113,7 @@ export default function EditorScreen() {
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays < 7) return `${diffDays}d ago`;
-        
+
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
     };
 
@@ -160,11 +161,22 @@ export default function EditorScreen() {
             <Stack.Screen options={{
                 headerShown: true,
                 title: '',
-                headerStyle: { backgroundColor: Theme.background },
+                headerTransparent: true,
+                headerBackground: () => (
+                    <BlurView tint="light" intensity={80} style={StyleSheet.absoluteFill} />
+                ),
                 headerTintColor: Theme.text,
                 headerRight: () => (
-                    <TouchableOpacity onPress={() => router.push(`/preview/${currentProject.id}`)}>
-                        <Text style={{ color: Theme.primary, fontSize: 17, fontWeight: '600' }}>Preview</Text>
+                    <TouchableOpacity
+                        onPress={() => router.push(`/preview/${currentProject.id}`)}
+                        style={{
+                            backgroundColor: Theme.primary + '15',
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 16,
+                        }}
+                    >
+                        <Text style={{ color: Theme.primary, fontSize: 15, fontWeight: '600' }}>Preview</Text>
                     </TouchableOpacity>
                 )
             }} />
@@ -223,9 +235,9 @@ export default function EditorScreen() {
                             </View>
                         ) : (
                             <View style={styles.emptyTagsContainer}>
-                            <Text style={styles.emptyTagsText}>
-                                No tags. Tap &quot;Add Tags&quot; to organize this project.
-                            </Text>
+                                <Text style={styles.emptyTagsText}>
+                                    No tags. Tap &quot;Add Tags&quot; to organize this project.
+                                </Text>
                             </View>
                         )}
                     </View>
@@ -239,37 +251,39 @@ export default function EditorScreen() {
                 )}
 
                 {/* Tabs */}
-                <View style={styles.tabBar}>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'notes' && styles.activeTab]}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setActiveTab('notes');
-                        }}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>AI Notes</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'transcript' && styles.activeTab]}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setActiveTab('transcript');
-                        }}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'transcript' && styles.activeTabText]}>Transcript</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'create' && styles.activeTab]}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setActiveTab('create');
-                        }}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>Create</Text>
-                    </TouchableOpacity>
+                <View style={styles.tabBarContainer}>
+                    <View style={styles.tabBar}>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'notes' && styles.activeTab]}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setActiveTab('notes');
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>AI Notes</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'transcript' && styles.activeTab]}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setActiveTab('transcript');
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'transcript' && styles.activeTabText]}>Transcript</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'create' && styles.activeTab]}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setActiveTab('create');
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>Create</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Tab Content */}
@@ -390,7 +404,7 @@ export default function EditorScreen() {
                     const currentTags = currentProject.tags || [];
                     const addedTags = tagIds.filter(id => !currentTags.includes(id));
                     const removedTags = currentTags.filter(id => !tagIds.includes(id));
-                    
+
                     if (addedTags.length > 0) {
                         addTagsToProject(currentProject.id, addedTags);
                     }
@@ -414,6 +428,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
+        paddingTop: 100, // Space for transparent header
         paddingBottom: 40,
     },
     titleSection: {
@@ -492,29 +507,39 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginBottom: 20,
     },
+    tabBarContainer: {
+        paddingHorizontal: 20,
+        marginBottom: 20,
+    },
     tabBar: {
         flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: Theme.border,
-        paddingHorizontal: 20,
+        backgroundColor: Theme.surface,
+        borderRadius: 20,
+        padding: 4,
+        ...Theme.shadows.medium,
     },
     tab: {
         flex: 1,
-        paddingVertical: 14,
+        paddingVertical: 10,
         alignItems: 'center',
-        borderBottomWidth: 2,
-        borderBottomColor: 'transparent',
+        borderRadius: 16,
     },
     activeTab: {
-        borderBottomColor: Theme.primary,
+        backgroundColor: Theme.primary,
+        shadowColor: Theme.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     tabText: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
         color: Theme.textSecondary,
     },
     activeTabText: {
-        color: Theme.primary,
+        color: '#FFFFFF',
+        fontWeight: '700',
     },
     tabContent: {
         flex: 1,
@@ -541,24 +566,23 @@ const styles = StyleSheet.create({
     },
     toolCard: {
         width: '31%',
-        backgroundColor: Theme.surfaceHighlight,
-        borderRadius: 12,
-        padding: 10,
-        borderWidth: 1,
-        borderColor: Theme.border,
+        backgroundColor: Theme.surface,
+        borderRadius: 20,
+        padding: 16,
         alignItems: 'center',
+        ...Theme.shadows.small,
     },
     toolCardDisabled: {
         opacity: 0.5,
     },
     toolIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: Theme.primary + '15',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: Theme.surfaceHighlight,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     toolCardLabel: {
         fontSize: 13,
