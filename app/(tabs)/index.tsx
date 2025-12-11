@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FolderListItem } from '../../components/FolderListItem';
 import { FolderModal } from '../../components/FolderModal';
@@ -268,23 +267,20 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-        {/* Header with Glassmorphism */}
-        <BlurView intensity={80} tint="light" style={styles.headerBlur}>
+        {/* Header */}
+        <View style={styles.header}>
           <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
             <View style={styles.headerContent}>
               {viewMode === 'folder-content' ? (
                 <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
                   <Ionicons name="chevron-back" size={28} color={Theme.primary} />
+                  <Text style={styles.backButtonText}>Projects</Text>
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.logoContainer}>
-                  <Text style={styles.headerTitleText}>Projects</Text>
-                </View>
-              )}
+              ) : null}
               <View style={styles.headerTitle}>
-                {viewMode === 'folder-content' && currentFolder ? (
-                  <Text style={styles.headerTitleText}>{currentFolder.name}</Text>
-                ) : null}
+                <Text style={styles.headerTitleText}>
+                  {viewMode === 'folder-content' && currentFolder ? currentFolder.name : 'Projects'}
+                </Text>
               </View>
               <View style={styles.headerActions}>
                 {viewMode === 'folders' && (
@@ -304,7 +300,7 @@ export default function HomeScreen() {
                 <Ionicons name="search" size={20} color={Theme.textSecondary} style={styles.searchIcon} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search projects..."
+                  placeholder="Search"
                   placeholderTextColor={Theme.textTertiary}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -321,45 +317,24 @@ export default function HomeScreen() {
                 )}
               </View>
 
-              {/* Filter Chips */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterContainer}
-                contentContainerStyle={styles.filterContent}
-              >
-                {filterOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.filterChip,
-                      filterType === option.value && styles.filterChipActive,
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setFilterType(option.value);
-                    }}
-                  >
-                    <Ionicons
-                      name={option.icon as any}
-                      size={14}
-                      color={filterType === option.value ? '#FFFFFF' : Theme.textSecondary}
-                      style={styles.filterIcon}
-                    />
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        filterType === option.value && styles.filterChipTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {/* Simplified Filter - Just Segmented Control Concept */}
+              <View style={styles.segmentedControl}>
+                <TouchableOpacity
+                  style={[styles.segment, filterType === 'all' && styles.segmentActive]}
+                  onPress={() => setFilterType('all')}
+                >
+                  <Text style={[styles.segmentText, filterType === 'all' && styles.segmentTextActive]}>All</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.segment, filterType === 'recent' && styles.segmentActive]}
+                  onPress={() => setFilterType('recent')}
+                >
+                  <Text style={[styles.segmentText, filterType === 'recent' && styles.segmentTextActive]}>Recent</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </SafeAreaView>
-        </BlurView>
+        </View>
 
         {/* Content */}
         <FlatList
@@ -505,79 +480,60 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  headerBlur: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+  header: {
+    backgroundColor: Theme.background,
     zIndex: 100,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   headerSafeArea: {
-    backgroundColor: 'transparent',
+    backgroundColor: Theme.background,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 4,
-    marginRight: 8,
+    marginLeft: -8,
   },
-  logoContainer: {
-    marginRight: 12,
-  },
-  logoText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#2F54EB',
-    letterSpacing: -1,
-  },
-  logoDot: {
-    color: '#2F54EB',
+  backButtonText: {
+    fontSize: 17,
+    color: Theme.primary,
+    marginLeft: -4,
   },
   headerTitle: {
     flex: 1,
   },
   headerTitleText: {
-    fontSize: 28, // Larger iOS style title
-    fontWeight: '800',
+    ...Theme.typography.largeTitle,
     color: Theme.text,
-    letterSpacing: -0.5,
-  },
-  breadcrumb: {
-    fontSize: 12,
-    color: Theme.textSecondary,
-    marginTop: 2,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
   },
   iconButton: {
     padding: 8,
-    backgroundColor: Theme.surfaceSubtle,
-    borderRadius: 20,
   },
   searchFilterSection: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(118, 118, 128, 0.12)', // iOS Search Bar Color
+    backgroundColor: 'rgba(118, 118, 128, 0.12)',
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     marginBottom: 12,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 6,
   },
   searchInput: {
     flex: 1,
@@ -587,85 +543,50 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     padding: 4,
-    marginLeft: 8,
   },
-  filterContainer: {
-    marginBottom: 0,
-  },
-  filterContent: {
-    paddingRight: 16,
-  },
-  filterChip: {
+  segmentedControl: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    ...Theme.shadows.small,
-  },
-  filterChipActive: {
-    backgroundColor: Theme.primary,
-  },
-  filterIcon: {
-    marginRight: 6,
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Theme.textSecondary,
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-  },
-  tagFiltersSection: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Theme.border,
-  },
-  tagFiltersHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    backgroundColor: 'rgba(118, 118, 128, 0.12)',
+    borderRadius: 8,
+    padding: 2,
     marginBottom: 8,
   },
-  tagFiltersTitle: {
+  segment: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+  },
+  segmentActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  segmentText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: Theme.text,
   },
-  clearTagsButton: {
-    padding: 4,
-  },
-  clearTagsText: {
-    fontSize: 13,
+  segmentTextActive: {
     fontWeight: '600',
-    color: Theme.primary,
-  },
-  tagFiltersContainer: {
-    marginTop: 4,
-  },
-  tagFiltersContent: {
-    paddingRight: 16,
   },
   listContent: {
-    paddingTop: 180, // Space for the absolute header
     paddingBottom: 100,
   },
   projectCardWrapper: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    paddingHorizontal: 0, // Full width
   },
   projectCardContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Theme.surface,
     padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Theme.primary + '30',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Theme.border,
   },
   titleEditor: {
     flex: 1,
@@ -677,23 +598,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyStateIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Theme.surfaceHighlight,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Theme.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   emptyStateTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: Theme.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateText: {
-    fontSize: 15,
+    fontSize: 16,
     color: Theme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
@@ -702,17 +623,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 32,
     right: 24,
-    shadowColor: Theme.primary,
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowRadius: 8,
+    elevation: 6,
   },
   fabGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Theme.primary, // Solid color for Apple style
   },
 });

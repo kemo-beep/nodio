@@ -13,11 +13,11 @@ interface FolderListItemProps {
     isSelected?: boolean;
 }
 
-export const FolderListItem: React.FC<FolderListItemProps> = ({ 
-    folder, 
-    onPress, 
+export const FolderListItem: React.FC<FolderListItemProps> = ({
+    folder,
+    onPress,
     onLongPress,
-    isSelected = false 
+    isSelected = false
 }) => {
     const { getProjectsByFolder } = useProjectStore();
     const { getFoldersByParent } = useFolderStore();
@@ -34,10 +34,10 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
             style={[styles.container, isSelected && styles.containerSelected]}
         >
             <View style={[styles.iconContainer, folder.color && { backgroundColor: folder.color + '20' }]}>
-                <Ionicons 
-                    name={folder.icon as any || (isDefaultFolder ? 'folder-outline' : 'folder')} 
-                    size={22} 
-                    color={folder.color || Theme.primary} 
+                <Ionicons
+                    name={folder.icon as any || (isDefaultFolder ? 'folder-outline' : 'folder')}
+                    size={22}
+                    color={folder.color || Theme.primary}
                 />
             </View>
             <View style={styles.content}>
@@ -56,19 +56,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 12,
-        paddingHorizontal: 16,
-        backgroundColor: 'transparent',
+        paddingHorizontal: 20,
+        backgroundColor: Theme.surface,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: Theme.border,
     },
     containerSelected: {
-        backgroundColor: Theme.surface,
+        backgroundColor: Theme.surfaceSecondary,
     },
     iconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        backgroundColor: 'rgba(0,122,255,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
         marginRight: 12,
     },
     content: {
@@ -77,17 +73,18 @@ const styles = StyleSheet.create({
     },
     name: {
         fontSize: 17,
-        fontWeight: '400',
+        fontWeight: '600',
         color: Theme.text,
+        letterSpacing: -0.41,
     },
     count: {
-        fontSize: 15,
+        fontSize: 17,
         color: Theme.textSecondary,
         fontWeight: '400',
         marginRight: 8,
     },
     chevron: {
-        opacity: 0.5,
+        opacity: 0.3,
     },
 });
 

@@ -9,6 +9,7 @@ interface TitleEditorProps {
     onCancel?: () => void;
     placeholder?: string;
     style?: any;
+    textStyle?: any; // Using any to avoid strict type issues for now, or StyleProp<TextStyle>
 }
 
 export const TitleEditor: React.FC<TitleEditorProps> = ({
@@ -17,6 +18,7 @@ export const TitleEditor: React.FC<TitleEditorProps> = ({
     onCancel,
     placeholder = 'Enter title',
     style,
+    textStyle,
 }) => {
     const [editingTitle, setEditingTitle] = useState(title);
     const [isEditing, setIsEditing] = useState(false);
@@ -48,7 +50,7 @@ export const TitleEditor: React.FC<TitleEditorProps> = ({
                 style={[styles.container, style]}
                 activeOpacity={0.7}
             >
-                <Text style={styles.titleText} numberOfLines={1}>{title || placeholder}</Text>
+                <Text style={[styles.titleText, textStyle]} numberOfLines={1}>{title || placeholder}</Text>
                 <Ionicons name="create-outline" size={16} color={Theme.textTertiary} style={styles.editIcon} />
             </TouchableOpacity>
         );
@@ -57,7 +59,7 @@ export const TitleEditor: React.FC<TitleEditorProps> = ({
     return (
         <View style={[styles.editingContainer, style]}>
             <TextInput
-                style={styles.input}
+                style={[styles.input, textStyle]}
                 value={editingTitle}
                 onChangeText={setEditingTitle}
                 placeholder={placeholder}

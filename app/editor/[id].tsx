@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -162,21 +161,28 @@ export default function EditorScreen() {
                 headerShown: true,
                 title: '',
                 headerTransparent: true,
-                headerBackground: () => (
-                    <BlurView tint="light" intensity={80} style={StyleSheet.absoluteFill} />
+                headerStyle: {
+                    backgroundColor: Theme.background,
+                },
+                headerTintColor: Theme.primary, // Yellow back button
+                headerLeft: () => (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginLeft: -8 }}
+                    >
+                        <Ionicons name="chevron-back" size={28} color={Theme.primary} />
+                        <Text style={{ fontSize: 17, color: Theme.primary, marginLeft: -4 }}>Projects</Text>
+                    </TouchableOpacity>
                 ),
-                headerTintColor: Theme.text,
                 headerRight: () => (
                     <TouchableOpacity
                         onPress={() => router.push(`/preview/${currentProject.id}`)}
                         style={{
-                            backgroundColor: Theme.primary + '15',
                             paddingHorizontal: 12,
                             paddingVertical: 6,
-                            borderRadius: 16,
                         }}
                     >
-                        <Text style={{ color: Theme.primary, fontSize: 15, fontWeight: '600' }}>Preview</Text>
+                        <Ionicons name="share-outline" size={24} color={Theme.primary} />
                     </TouchableOpacity>
                 )
             }} />
@@ -189,33 +195,34 @@ export default function EditorScreen() {
                         onSave={(newTitle) => updateProjectTitle(currentProject.id, newTitle)}
                         placeholder="Untitled Project"
                         style={styles.titleEditor}
+                        textStyle={Theme.typography.largeTitle}
                     />
                     <View style={styles.metadataContainer}>
                         <Text style={styles.metadata}>
-                            {formatDate(currentProject.date)} • {formatDuration(audioDuration)}
+                            {formatDate(currentProject.date)}
                         </Text>
                         {currentProject.folderId && (
-                            <>
-                                <Text style={styles.metadataSeparator}>•</Text>
-                                <Text style={styles.metadata}>
-                                    {getFolderById(currentProject.folderId)?.name || 'Folder'}
-                                </Text>
-                            </>
+                            <Text style={styles.metadata}>
+                                {' '}{getFolderById(currentProject.folderId)?.name || 'Folder'}
+                            </Text>
                         )}
                     </View>
 
                     {/* Tags Section */}
+                    {/* ... (Tags section remains similar but maybe subtler) ... */}
                     <View style={styles.tagsSection}>
+                        {/* Simplified tags for now, or keep as is but cleaner */}
                         <View style={styles.tagsHeader}>
                             <Text style={styles.tagsSectionTitle}>Tags</Text>
                             <TouchableOpacity
                                 onPress={() => setTagSelectorVisible(true)}
                                 style={styles.addTagButton}
                             >
-                                <Ionicons name="add-circle-outline" size={20} color={Theme.primary} />
-                                <Text style={styles.addTagText}>Add Tags</Text>
+                                <Ionicons name="add-circle" size={20} color={Theme.primary} />
+                                <Text style={styles.addTagText}>Add</Text>
                             </TouchableOpacity>
                         </View>
+                        {/* ... existing tag logic ... */}
                         {currentProject.tags && currentProject.tags.length > 0 ? (
                             <View style={styles.tagsContainer}>
                                 {currentProject.tags.map((tagId) => {
@@ -225,7 +232,7 @@ export default function EditorScreen() {
                                         <View key={tagId} style={styles.tagWrapper}>
                                             <TagChip
                                                 tag={tag}
-                                                size="medium"
+                                                size="small"
                                                 showRemove
                                                 onRemove={() => removeTagFromProject(currentProject.id, tagId)}
                                             />
@@ -233,13 +240,7 @@ export default function EditorScreen() {
                                     );
                                 })}
                             </View>
-                        ) : (
-                            <View style={styles.emptyTagsContainer}>
-                                <Text style={styles.emptyTagsText}>
-                                    No tags. Tap &quot;Add Tags&quot; to organize this project.
-                                </Text>
-                            </View>
-                        )}
+                        ) : null}
                     </View>
                 </View>
 
@@ -250,38 +251,35 @@ export default function EditorScreen() {
                     </View>
                 )}
 
-                {/* Tabs */}
+                {/* Tabs - Segmented Control Style */}
                 <View style={styles.tabBarContainer}>
-                    <View style={styles.tabBar}>
+                    <View style={styles.segmentedControl}>
                         <TouchableOpacity
-                            style={[styles.tab, activeTab === 'notes' && styles.activeTab]}
+                            style={[styles.segment, activeTab === 'notes' && styles.segmentActive]}
                             onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                Haptics.selectionAsync();
                                 setActiveTab('notes');
                             }}
-                            activeOpacity={0.7}
                         >
-                            <Text style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>AI Notes</Text>
+                            <Text style={[styles.segmentText, activeTab === 'notes' && styles.segmentTextActive]}>Notes</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.tab, activeTab === 'transcript' && styles.activeTab]}
+                            style={[styles.segment, activeTab === 'transcript' && styles.segmentActive]}
                             onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                Haptics.selectionAsync();
                                 setActiveTab('transcript');
                             }}
-                            activeOpacity={0.7}
                         >
-                            <Text style={[styles.tabText, activeTab === 'transcript' && styles.activeTabText]}>Transcript</Text>
+                            <Text style={[styles.segmentText, activeTab === 'transcript' && styles.segmentTextActive]}>Transcript</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.tab, activeTab === 'create' && styles.activeTab]}
+                            style={[styles.segment, activeTab === 'create' && styles.segmentActive]}
                             onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                Haptics.selectionAsync();
                                 setActiveTab('create');
                             }}
-                            activeOpacity={0.7}
                         >
-                            <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>Create</Text>
+                            <Text style={[styles.segmentText, activeTab === 'create' && styles.segmentTextActive]}>Create</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -428,56 +426,54 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingTop: 100, // Space for transparent header
+        paddingTop: 5,
         paddingBottom: 40,
     },
     titleSection: {
-        padding: 20,
+        paddingHorizontal: 20,
         paddingBottom: 12,
     },
     titleEditor: {
-        marginBottom: 8,
+        marginBottom: 4,
     },
     metadataContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        flexWrap: 'wrap',
+        marginBottom: 16,
     },
     metadata: {
-        fontSize: 13,
+        fontSize: 15,
         color: Theme.textSecondary,
-        fontWeight: '500',
+        fontWeight: '400',
     },
     metadataSeparator: {
-        fontSize: 13,
-        color: Theme.textTertiary,
-        marginHorizontal: 6,
+        display: 'none',
     },
     tagsSection: {
-        marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: Theme.border,
+        marginTop: 0,
+        paddingTop: 0,
+        borderTopWidth: 0,
     },
     tagsHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     tagsSectionTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: Theme.text,
+        fontSize: 13,
+        fontWeight: '600',
+        color: Theme.textSecondary,
+        marginRight: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     addTagButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        padding: 4,
     },
     addTagText: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
         color: Theme.primary,
     },
@@ -490,18 +486,10 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     emptyTagsContainer: {
-        paddingVertical: 12,
-        paddingHorizontal: 12,
-        backgroundColor: Theme.surface,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: Theme.border,
-        borderStyle: 'dashed',
+        display: 'none',
     },
     emptyTagsText: {
-        fontSize: 13,
-        color: Theme.textSecondary,
-        textAlign: 'center',
+        display: 'none',
     },
     audioPlayerContainer: {
         paddingHorizontal: 20,
@@ -511,35 +499,49 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         marginBottom: 20,
     },
-    tabBar: {
+    segmentedControl: {
         flexDirection: 'row',
-        backgroundColor: Theme.surface,
-        borderRadius: 20,
-        padding: 4,
-        ...Theme.shadows.medium,
+        backgroundColor: 'rgba(118, 118, 128, 0.12)',
+        borderRadius: 8,
+        padding: 2,
+    },
+    segment: {
+        flex: 1,
+        paddingVertical: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 6,
+    },
+    segmentActive: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    segmentText: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: Theme.text,
+    },
+    segmentTextActive: {
+        fontWeight: '600',
+    },
+    tabBar: {
+        display: 'none',
     },
     tab: {
-        flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderRadius: 16,
+        display: 'none',
     },
     activeTab: {
-        backgroundColor: Theme.primary,
-        shadowColor: Theme.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        display: 'none',
     },
     tabText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: Theme.textSecondary,
+        display: 'none',
     },
     activeTabText: {
-        color: '#FFFFFF',
-        fontWeight: '700',
+        display: 'none',
     },
     tabContent: {
         flex: 1,
@@ -550,79 +552,79 @@ const styles = StyleSheet.create({
     },
     toolsSection: {
         marginBottom: 24,
-        alignSelf: 'center',
-        width: '85%',
     },
     toolsSectionTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: Theme.text,
+        fontSize: 13,
+        fontWeight: '600',
+        color: Theme.textSecondary,
         marginBottom: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     toolsGrid: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
+        gap: 12,
     },
     toolCard: {
-        width: '31%',
-        backgroundColor: Theme.surface,
-        borderRadius: 20,
-        padding: 16,
+        flex: 1,
+        backgroundColor: Theme.surfaceSecondary,
+        borderRadius: 12,
+        padding: 12,
         alignItems: 'center',
-        ...Theme.shadows.small,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: 'rgba(0,0,0,0.05)',
     },
     toolCardDisabled: {
         opacity: 0.5,
     },
     toolIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Theme.surfaceHighlight,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: Theme.background,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 10,
+        marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     toolCardLabel: {
         fontSize: 13,
-        fontWeight: '600',
+        fontWeight: '500',
         color: Theme.text,
     },
     summarySection: {
         marginTop: 8,
     },
     summarySectionTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '700',
         color: Theme.text,
         marginBottom: 12,
     },
     summaryBox: {
-        backgroundColor: Theme.surfaceHighlight,
+        backgroundColor: Theme.surfaceSecondary,
         borderRadius: 12,
         padding: 16,
-        borderWidth: 1,
-        borderColor: Theme.border,
     },
     summaryText: {
-        fontSize: 16,
+        fontSize: 17,
         lineHeight: 24,
         color: Theme.text,
     },
     emptySummaryBox: {
-        backgroundColor: Theme.surfaceHighlight,
+        backgroundColor: Theme.surfaceSecondary,
         borderRadius: 12,
         padding: 24,
-        borderWidth: 1,
-        borderColor: Theme.border,
-        borderStyle: 'dashed',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 120,
     },
     emptySummaryText: {
-        fontSize: 14,
+        fontSize: 15,
         color: Theme.textSecondary,
         textAlign: 'center',
         marginTop: 12,
@@ -643,7 +645,7 @@ const styles = StyleSheet.create({
     },
     transcriptInput: {
         flex: 1,
-        padding: 16,
+        padding: 20,
         fontSize: 17,
         lineHeight: 24,
         color: Theme.text,

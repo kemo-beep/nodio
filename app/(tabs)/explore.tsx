@@ -1,16 +1,21 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Theme } from '../../constants/Colors';
+import { Colors, Theme } from '../../constants/Colors';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useThemeStore } from '../../store/useThemeStore';
 
 export default function ProfileScreen() {
   const { projects } = useProjectStore();
-  
+  const { themeMode, setThemeMode } = useThemeStore();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   const totalScenes = projects.reduce((sum, project) => {
-    const projectScenes = project.videos?.reduce((videoSum, video) => 
+    const projectScenes = project.videos?.reduce((videoSum, video) =>
       videoSum + (video.scenes?.length || 0), 0) || 0;
     return sum + projectScenes;
   }, 0);
@@ -21,10 +26,10 @@ export default function ProfileScreen() {
   ];
 
   const menuItems = [
-    { label: 'Settings', icon: 'settings-outline', action: () => {} },
-    { label: 'Export Data', icon: 'download-outline', action: () => {} },
-    { label: 'Help & Support', icon: 'help-circle-outline', action: () => {} },
-    { label: 'About', icon: 'information-circle-outline', action: () => {} },
+    { label: 'Settings', icon: 'settings-outline', action: () => { } },
+    { label: 'Export Data', icon: 'download-outline', action: () => { } },
+    { label: 'Help & Support', icon: 'help-circle-outline', action: () => { } },
+    { label: 'About', icon: 'information-circle-outline', action: () => { } },
   ];
 
   return (
@@ -65,6 +70,39 @@ export default function ProfileScreen() {
                 <Text style={styles.statValue}>{stat.value}</Text>
                 <Text style={styles.statLabel}>{stat.label}</Text>
               </View>
+            ))}
+          </View>
+
+          {/* Theme Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
+          </View>
+          <View style={[styles.themeContainer, { backgroundColor: colors.surface }]}>
+            {(['light', 'dark', 'system'] as const).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                style={[
+                  styles.themeOption,
+                  themeMode === mode && { backgroundColor: colors.surfaceHighlight },
+                ]}
+                onPress={() => setThemeMode(mode)}
+              >
+                <Ionicons
+                  name={
+                    mode === 'light' ? 'sunny-outline' : mode === 'dark' ? 'moon-outline' : 'phone-portrait-outline'
+                  }
+                  size={24}
+                  color={themeMode === mode ? colors.primary : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.themeText,
+                    { color: themeMode === mode ? colors.text : colors.textSecondary },
+                  ]}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
 
@@ -225,5 +263,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Theme.text,
+  },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Theme.text,
+  },
+  themeContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    backgroundColor: Theme.surface,
+    padding: 4,
+    borderRadius: 16,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  themeOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  themeText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

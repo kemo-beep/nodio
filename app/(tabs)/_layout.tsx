@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { RecordButton } from '@/components/RecordButton';
+import { Theme } from '@/constants/Colors';
 import AIService from '@/services/AIService';
 import AudioService from '@/services/AudioService';
 import { useFolderStore } from '@/store/useFolderStore';
@@ -70,11 +71,11 @@ export default function TabLayout() {
         } catch (transcribeError: any) {
           console.error("Transcription error:", transcribeError);
           setProcessing(false);
-          
+
           // Check if it's an API key error
           const errorMessage = transcribeError?.message || "Unknown error";
           const isApiKeyError = errorMessage.includes('API key') || errorMessage.includes('not configured');
-          
+
           Alert.alert(
             "Transcription Error",
             isApiKeyError
@@ -88,10 +89,10 @@ export default function TabLayout() {
         // Create new project with just the transcript
         // User can create videos/scenes/summaries/etc. from the Create tab later
         // Get the current folder ID from the navigation stack (most recent folder)
-        const folderId = folderNavigationStack.length > 0 
-          ? folderNavigationStack[folderNavigationStack.length - 1] 
+        const folderId = folderNavigationStack.length > 0
+          ? folderNavigationStack[folderNavigationStack.length - 1]
           : currentFolderId;
-        
+
         const projectId = Date.now().toString();
         const now = new Date();
         const newProject = {
@@ -105,7 +106,7 @@ export default function TabLayout() {
           folderId: folderId, // Use folder from navigation stack or current folder
           tags: [],
         };
-        
+
         console.log('Creating project with folderId:', folderId, 'currentFolderId:', currentFolderId, 'stack:', folderNavigationStack);
 
         // Save to store and database
@@ -160,47 +161,35 @@ export default function TabLayout() {
 
   return (
     <View style={styles.container}>
+
+
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#2F54EB', // Brand Blue
+          tabBarActiveTintColor: Theme.primary,
           tabBarInactiveTintColor: '#8E8E93',
           headerShown: false,
           tabBarButton: HapticTab,
-          tabBarBackground: () => (
-            <View style={styles.tabBarBackground}>
-              <BlurView
-                tint="light"
-                intensity={95}
-                style={StyleSheet.absoluteFill}
-              />
-            </View>
-          ),
           tabBarStyle: {
             position: 'absolute',
-            borderTopWidth: 0,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: 'rgba(0,0,0,0.1)',
             elevation: 0,
-            height: 60 + insets.bottom,
-            paddingBottom: insets.bottom + 8,
-            paddingTop: 12,
-            backgroundColor: Platform.select({
-              ios: 'rgba(255, 255, 255, 0.95)',
-              android: 'rgba(255, 255, 255, 0.98)',
-            }),
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
+            height: 84, // Standard iOS tab bar height (49 + 34 safe area)
+            paddingBottom: 30,
+            paddingTop: 8,
+            backgroundColor: Theme.background,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 16,
+            shadowOffset: { width: 0, height: -1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
-            marginTop: 4,
-            letterSpacing: 0.1,
+            fontSize: 10,
+            fontWeight: '500',
+            marginTop: 2,
           },
           tabBarIconStyle: {
-            marginTop: 0,
+            marginTop: 4,
           },
         }}>
         <Tabs.Screen
@@ -208,10 +197,10 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons 
-                size={focused ? 26 : 24} 
-                name={focused ? "home" : "home-outline"} 
-                color={color} 
+              <Ionicons
+                size={focused ? 26 : 24}
+                name={focused ? "home" : "home-outline"}
+                color={color}
               />
             ),
           }}
@@ -221,17 +210,17 @@ export default function TabLayout() {
           options={{
             title: 'Account',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons 
-                size={focused ? 26 : 24} 
-                name={focused ? "person" : "person-outline"} 
-                color={color} 
+              <Ionicons
+                size={focused ? 26 : 24}
+                name={focused ? "person" : "person-outline"}
+                color={color}
               />
             ),
           }}
         />
       </Tabs>
       {/* Central Record Button */}
-      <View style={[styles.recordButtonContainer, { bottom: (70 + insets.bottom) / 2 - 36 }]}>
+      <View style={[styles.recordButtonContainer, { bottom: 30 }]}>
         <RecordButton
           isRecording={isRecording}
           onPress={handleRecordPress}
@@ -262,10 +251,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabBarBackground: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    display: 'none',
   },
   iconContainer: {
     position: 'relative',

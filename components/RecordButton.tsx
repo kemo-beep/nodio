@@ -82,6 +82,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         ...Theme.shadows.large, // Prominent shadow for FAB
         borderWidth: 4,
-        borderColor: Theme.surface, // Matches tab bar/background
+        borderColor: '#FFFFFF', // White border for contrast
     },
 });

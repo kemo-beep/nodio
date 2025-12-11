@@ -114,7 +114,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUri }) => {
                 <Ionicons
                     name={isPlaying ? 'pause' : 'play'}
                     size={24}
-                    color={Theme.primary}
+                    color="#FFFFFF"
                 />
             </TouchableOpacity>
 
@@ -137,27 +137,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         paddingHorizontal: 16,
-        backgroundColor: Theme.surfaceHighlight,
-        borderRadius: 12,
+        backgroundColor: Theme.surfaceSecondary,
+        borderRadius: 16,
         gap: 12,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: 'rgba(0,0,0,0.05)',
     },
     playButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Theme.primary + '15',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: Theme.primary,
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: Theme.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 2,
     },
     progressContainer: {
         flex: 1,
+        justifyContent: 'center',
     },
     progressBar: {
         height: 4,
-        backgroundColor: Theme.border,
+        backgroundColor: 'rgba(0,0,0,0.05)',
         borderRadius: 2,
         overflow: 'hidden',
-        marginBottom: 6,
+        marginBottom: 4,
     },
     progressFill: {
         height: '100%',
@@ -169,9 +177,10 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     timeText: {
-        fontSize: 12,
+        fontSize: 11,
         color: Theme.textSecondary,
         fontWeight: '500',
+        fontVariant: ['tabular-nums'],
     },
 });
 
